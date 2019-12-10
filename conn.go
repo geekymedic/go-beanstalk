@@ -72,6 +72,10 @@ func (c *Conn) Close() error {
 	return c.c.Close()
 }
 
+func (c *Conn) Cmd(t *Tube, ts *TubeSet, body []byte, op string, args ...interface{}) (req, error) {
+	return c.cmd(t, ts, body, op, args...)
+}
+
 func (c *Conn) cmd(t *Tube, ts *TubeSet, body []byte, op string, args ...interface{}) (req, error) {
 	r := req{c.c.Next(), op}
 	c.c.StartRequest(r.id)
@@ -263,6 +267,19 @@ func (c *Conn) ListTubes() ([]string, error) {
 	}
 	body, err := c.readResp(r, true, "OK")
 	return parseList(body), err
+}
+
+// Use change connect tube
+func (c *Conn) Use(t *Tube) error {
+	r := req{id: c.c.Next()}
+	c.c.StartRequest(r.id)
+	defer c.c.EndRequest(r.id)
+	err := c.adjustTubes(t, nil)
+	if err != nil {
+		return err
+	}
+	err = c.c.W.Flush()
+	return err
 }
 
 func scan(input, format string, a ...interface{}) error {
